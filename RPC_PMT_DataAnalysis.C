@@ -401,14 +401,15 @@ SignalParams calculateSignalParams( const vector<double>& time,
         if (idx_01_left == -1 && val <= threshold_01) idx_01_left = i;
 
         // double dt = (time[i] - time[i-1]) * 1e-9;
-        double current = (signal[i] * 1e-3) / IMPEDANCE;
-        integral_left += current * step * 1e-9;
+        const double dt = (time[i] - time[i - 1]) * 1e-9;
+        const double current = 0.5 * (signal[i] + signal[i - 1]) * 1e-3 / IMPEDANCE;
+        integral_left += current * dt;
 
         if (idx_01_left != -1 && idx_90_start != -1 && idx_10_start != -1 &&
             idx_50_left != -1 && idx_CFD_start != -1) break;
     }
 
-    for (int i = start_idx; i < sig_size; ++i) {
+    for (int i = start_idx; i + 1 < sig_size; ++i) {
         const double val = abs(signal[i]);  // 只计算一次abs
 
         if (idx_50_right == -1 && val <= threshold_50) idx_50_right = i;
@@ -416,8 +417,9 @@ SignalParams calculateSignalParams( const vector<double>& time,
             idx_01_right = i;
 
         // const double dt = (time[i+1] - time[i]) * 1e-9;
-        const double current = (signal[i+1] * 1e-3) / IMPEDANCE;
-        integral_right += current * step * 1e-9;
+        const double dt = (time[i + 1] - time[i]) * 1e-9;
+        const double current = 0.5 * (signal[i] + signal[i + 1]) * 1e-3 / IMPEDANCE;
+        integral_right += current * dt;
 
         if (idx_01_right != -1 && idx_50_right != -1) break;
     }
