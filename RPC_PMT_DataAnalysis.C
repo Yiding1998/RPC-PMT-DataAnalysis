@@ -301,6 +301,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
     double A_f_pmt = 0;
     double mean_f_pmt = 0;
     double sigma_f_pmt = 0;
+    bool gaussian_fit_valid = false;
 
     if ( Gaus_Fit ){
 
@@ -338,7 +339,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
 
         TF1 *f_pmt = new TF1("f_pmt", "gaus",t1,t2);
         f_pmt->SetParameters(signal[params.amplitudex_idx], time[params.amplitudex_idx], 1.7); // 初始参数：幅值、均值、标准差
-        g_pmt->Fit("f_pmt", "R Q");
+        int fit_status = g_pmt->Fit("f_pmt", "R Q");
         // Get the updated fit results
         A_f_pmt = f_pmt->GetParameter(0);
         mean_f_pmt = f_pmt->GetParameter(1);
@@ -360,14 +361,14 @@ SignalParams calculateSignalParams( const vector<double>& time,
         for (int i = 0; i < 2; i++)
         {
             const double fit_t1 = -sqrt(-log(PMT_Fit_T1))*sqrt(2)*sigma_f_pmt + mean_f_pmt;
-            const double fit_t2 = P_or_N*(-log(PMT_Fit_T2))*sqrt(2)*sigma_f_pmt + mean_f_pmt;
+            const double fit_t2 = P_or_N * sqrt(-log(PMT_Fit_T2)) * sqrt(2) * sigma_f_pmt + mean_f_pmt;
             f_pmt->SetRange(fit_t1, fit_t2);
             f_pmt->SetParameters(A_f_pmt, mean_f_pmt, sigma_f_pmt);
 
             // cout<<"Fit iteration " << i+1 << ": fit_t1 = " << fit_t1 << " ns, fit_t2 = " << fit_t2 << " ns" << endl;    
 
             // refit
-            g_pmt->Fit(f_pmt,"R Q");
+            fit_status = g_pmt->Fit(f_pmt,"R Q");
             // Get the updated fit results
             A_f_pmt = f_pmt->GetParameter(0);
             mean_f_pmt = f_pmt->GetParameter(1);
@@ -375,6 +376,9 @@ SignalParams calculateSignalParams( const vector<double>& time,
 
             // cout<<"A_f_pmt, mean_f_pmt, sigma_f_pmt: " << A_f_pmt << ", " << mean_f_pmt << " ns, " << sigma_f_pmt << " ns" << endl;
         }
+        gaussian_fit_valid = fit_status == 0 && std::isfinite(A_f_pmt) &&
+                             std::isfinite(mean_f_pmt) && std::isfinite(sigma_f_pmt) &&
+                             sigma_f_pmt > 0.0;
         // cout<<"\t"<<endl;
     }
   
@@ -477,7 +481,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
     params.threshold_time = RPC_THRESHOLD < params.amplitude ?
                            interpolateTime(time, signal, threshold_A, idx_threshold_prev, idx_threshold_start) : std::numeric_limits<double>::quiet_NaN();
 
-    if (Gaus_Fit){
+    if (Gaus_Fit && gaussian_fit_valid){
 
         const double pmt_time_50 = -sqrt(-log(PMT_CFD_FRACTION))*sqrt(2)*sigma_f_pmt + mean_f_pmt;
         const double pmt_time_CFD = -sqrt(-log(RPC_CFD_FRACTION))*sqrt(2)*sigma_f_pmt + mean_f_pmt;
