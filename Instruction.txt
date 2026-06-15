@@ -1,0 +1,4 @@
+125 um kapton 垫片 + 90um PCB
+
+
+Time +RPC -PMT
