@@ -385,7 +385,17 @@ void RPC_WaveformSelector(double amp_min,
         voltage = voltage_value;
         const string folderName = to_string(voltage_value);
         const string folderPath = csvFolder + "/" + folderName;
-        const int csvCount = countCSVFiles(folderPath);
+        vector<string> csvFiles;
+        for (const auto& entry : fs::directory_iterator(folderPath)) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".csv") continue;
+            const string stem = entry.path().stem().string();
+            if (!stem.empty() && all_of(stem.begin(), stem.end(), ::isdigit))
+                csvFiles.push_back(entry.path().string());
+        }
+        sort(csvFiles.begin(), csvFiles.end(), [](const string& a, const string& b) {
+            return stoll(fs::path(a).stem().string()) < stoll(fs::path(b).stem().string());
+        });
+        const int csvCount = static_cast<int>(csvFiles.size());
         const int filesToProcess =
             (maxFilesPerVoltage > 0) ? std::min(csvCount, maxFilesPerVoltage) : csvCount;
 
@@ -399,8 +409,8 @@ void RPC_WaveformSelector(double amp_min,
 
         for (int i = 1; i <= filesToProcess; ++i) {
             file_index = i;
-            const string csvFile = folderPath + Form("/%06d.csv", i);
-            const string csvStem = Form("%06d", i);
+            const string csvFile = csvFiles[i - 1];
+            const string csvStem = fs::path(csvFile).stem().string();
             const string pngFile = (fs::path(pngBaseDir) / folderName / (csvStem + ".png")).string();
 
             vector<double> time;

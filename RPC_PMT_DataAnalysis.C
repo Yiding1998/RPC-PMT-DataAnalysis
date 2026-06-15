@@ -600,7 +600,17 @@ void processVoltageSerial(int voltage, const string& folder_name,
     // string csvFolder = "/ustcfs/STCFUser/yzhao/photo_RPC/Data_2026/e10_1atm_STDgas";
     
     string FileFolder = csvFolder + Form("/%s/", folder_name.c_str());
-    int csvCount = countCSVFiles(FileFolder);
+    vector<string> csvFiles;
+    for (const auto& entry : fs::directory_iterator(FileFolder)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".csv") continue;
+        const string stem = entry.path().stem().string();
+        if (!stem.empty() && all_of(stem.begin(), stem.end(), ::isdigit))
+            csvFiles.push_back(entry.path().string());
+    }
+    sort(csvFiles.begin(), csvFiles.end(), [](const string& a, const string& b) {
+        return stoll(fs::path(a).stem().string()) < stoll(fs::path(b).stem().string());
+    });
+    const int csvCount = static_cast<int>(csvFiles.size());
     // int csvCount = 2;  // 预设文件数量，实际使用时可调用countCSVFiles(FileFolder)获取
 
     // 【修复】分支变量声明在循环外部，确保生命周期覆盖所有Fill调用
@@ -630,7 +640,8 @@ void processVoltageSerial(int voltage, const string& folder_name,
     timing_diffs_thresh.reserve(csvCount);
 
     // for (int file_num = 1; file_num <= 300; ++file_num) {
-    for (int file_num = 1; file_num <= csvCount; ++file_num) {
+    for (int file_index = 0; file_index < csvCount; ++file_index) {
+        const int file_num = file_index + 1;
 
         if (file_num % 50 == 0) {
             cout << "folder_name: " << folder_name << "V, Processing file: "
@@ -638,14 +649,14 @@ void processVoltageSerial(int voltage, const string& folder_name,
                  << "  ****progress**** " << file_num * 100 / csvCount << "%" << endl;
         }
 
-        string filename = FileFolder + Form("/%06d.csv", file_num);
+        string filename = csvFiles[file_index];
 
         vector<double> rpc_time, pmt_time, rpc_signal, pmt_signal;
         if (!readCSVData(filename, rpc_time, pmt_time, rpc_signal, pmt_signal)) {
             if (file_num == 1) {
                 cout << "文件夹 " << folder_name << " 中没有找到数据文件" << endl;
             }
-            break;
+            continue;
         }
 
         baselineCorrection(rpc_signal, rpc_time);
