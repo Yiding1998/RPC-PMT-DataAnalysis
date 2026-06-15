@@ -386,7 +386,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
     const double threshold_A = RPC_THRESHOLD;
 
     int idx_10_start = -1, idx_90_start = -1, idx_50_left = -1;
-    int idx_01_left = -1, idx_CFD_start = -1, idx_threshold_start = -1;
+    int idx_01_left = -1, idx_CFD_start = -1, idx_threshold_start = -1, idx_threshold_prev = -1;
     int idx_50_right = -1, idx_01_right = -1;
 
     const int start_idx = params.amplitudex_idx;
@@ -402,7 +402,6 @@ SignalParams calculateSignalParams( const vector<double>& time,
         if (idx_50_left == -1 && val <= threshold_50) idx_50_left = i;
         if (idx_CFD_start == -1 && val <= threshold_CFD) idx_CFD_start = i;
         if (idx_10_start == -1 && val <= threshold_10) idx_10_start = i;
-        if (idx_threshold_start == -1 && val <= threshold_A) idx_threshold_start = i;
         if (idx_01_left == -1 && val <= threshold_01) idx_01_left = i;
 
         // double dt = (time[i] - time[i-1]) * 1e-9;
@@ -412,6 +411,16 @@ SignalParams calculateSignalParams( const vector<double>& time,
 
         if (idx_01_left != -1 && idx_90_start != -1 && idx_10_start != -1 &&
             idx_50_left != -1 && idx_CFD_start != -1) break;
+    }
+
+    int threshold_search_start_idx = lower_bound(time.begin(), time.end(), -9.0) - time.begin();
+    threshold_search_start_idx = max(1, min(threshold_search_start_idx, sig_size - 1));
+    for (int i = threshold_search_start_idx; i < sig_size; ++i) {
+        if (abs(signal[i]) >= threshold_A) {
+            idx_threshold_start = i;
+            idx_threshold_prev = i - 1;
+            break;
+        }
     }
 
     for (int i = start_idx; i + 1 < sig_size; ++i) {
@@ -466,7 +475,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
     params.timing_50 = interpolateTime(time, signal, threshold_50, idx_50_left - 1, idx_50_left);
     params.CFD_time = interpolateTime(time, signal, threshold_CFD, idx_CFD_start - 1, idx_CFD_start);
     params.threshold_time = RPC_THRESHOLD < params.amplitude ?
-                           interpolateTime(time, signal, threshold_A, idx_threshold_start - 1, idx_threshold_start) : std::numeric_limits<double>::quiet_NaN();
+                           interpolateTime(time, signal, threshold_A, idx_threshold_prev, idx_threshold_start) : std::numeric_limits<double>::quiet_NaN();
 
     if (Gaus_Fit){
 
