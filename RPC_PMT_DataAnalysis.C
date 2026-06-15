@@ -974,9 +974,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
         }
   
         // 拟合函数（与参考代码一致）
-        const string fitForm = "[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x+"
-                         "[5]*x*x*x*x*x+[6]*x*x*x*x*x*x+"
-                         "[7]/sqrt(x)+[8]/sqrt(x)/x+[9]/sqrt(x)/x/x";
+        const string fitForm = "[0]+[1]/sqrt(x)+[2]/x";
 
         // // 拟合函数（与参考代码一致）
         // const string fitForm = "[0]+[1]*x+[2]*x*x+[3]*x*x*x+[4]*x*x*x*x+"
@@ -1015,10 +1013,28 @@ void performTA_TQ_Correction(const vector<int>& voltages,
         // gr_thA->Fit(fitThA, "RQ");
         // gr_thQ->Fit(fitThQ, "RQ");
 
-        hCFD_A_ProfileX->Fit(fitCfdA, "RQ");
-        hCFD_Q_ProfileX->Fit(fitCfdQ, "RQ");
-        hThresh_A_ProfileX->Fit(fitThA, "RQ");
-        hThresh_Q_ProfileX->Fit(fitThQ, "RQ");
+        auto validProfileBins = [](const TProfile* profile) {
+            int count = 0;
+            for (int bin = 1; bin <= profile->GetNbinsX(); ++bin) {
+                if (profile->GetBinEntries(bin) > 0) ++count;
+            }
+            return count;
+        };
+        if (validProfileBins(hCFD_A_ProfileX) < 8 || validProfileBins(hCFD_Q_ProfileX) < 8 ||
+            validProfileBins(hThresh_A_ProfileX) < 8 || validProfileBins(hThresh_Q_ProfileX) < 8) {
+            cout << "  有效Profile bin不足，跳过修正" << endl;
+            outputFile->cd();
+            continue;
+        }
+        const int fitStatusCfdA = hCFD_A_ProfileX->Fit(fitCfdA, "RQ");
+        const int fitStatusCfdQ = hCFD_Q_ProfileX->Fit(fitCfdQ, "RQ");
+        const int fitStatusThA = hThresh_A_ProfileX->Fit(fitThA, "RQ");
+        const int fitStatusThQ = hThresh_Q_ProfileX->Fit(fitThQ, "RQ");
+        if (fitStatusCfdA != 0 || fitStatusCfdQ != 0 || fitStatusThA != 0 || fitStatusThQ != 0) {
+            cout << "  时间游走拟合失败，跳过修正" << endl;
+            outputFile->cd();
+            continue;
+        }
 
         // 构建拟合曲线 TGraph 用于绘制
         const int nFitPts = 100;
