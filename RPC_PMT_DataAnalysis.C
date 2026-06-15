@@ -79,8 +79,8 @@ const double RPC_THRESHOLD = 10;
 const bool FIT_RPC = false; // 是否对RPC信号进行高斯拟合
 const bool FIT_PMT = true; // 是否对PMT信号进行高斯拟合
 
-const string csvFolder = "/ustcfs/STCFUser/yzhao/LowPressure/ExpDatas_2606/40_50_10/3kpa";
-const char* outputFileName = "590um_3kPa";
+const string csvFolder = "/ustcfs/STCFUser/yzhao/LowPressure/ExpDatas/1090um/5kpa";
+const char* outputFileName = "1090um_5kPa";
     
 
 // // vector<int> voltages 
