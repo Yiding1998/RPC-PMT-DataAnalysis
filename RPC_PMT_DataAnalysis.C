@@ -1711,6 +1711,7 @@ void analyzeDataSerial() {
     // 创建TTree存储TAx修正后的时间分辨率
     TTree* TAC_tree = new TTree("tree_fitTAC_parameters", "Fit Parameters After TAC for Each Voltage");
 
+    int tac_voltage = 0;
     double sigma_cfd_before, sigmaErr_cfd_before;
     double sigma_cfd_afterTA, sigmaErr_cfd_afterTA;
     double sigma_cfd_afterTQ, sigmaErr_cfd_afterTQ;
@@ -1719,6 +1720,7 @@ void analyzeDataSerial() {
     double sigma_thresh_afterTA, sigmaErr_thresh_afterTA;
     double sigma_thresh_afterTQ, sigmaErr_thresh_afterTQ;
 
+    TAC_tree->Branch("voltage", &tac_voltage, "voltage/I");
     TAC_tree->Branch("sigma_cfd_before", &sigma_cfd_before, "sigma_cfd_before/D");
     TAC_tree->Branch("sigmaErr_cfd_before", &sigmaErr_cfd_before, "sigmaErr_cfd_before/D");
     TAC_tree->Branch("sigma_cfd_afterTA", &sigma_cfd_afterTA, "sigma_cfd_afterTA/D");
@@ -1897,6 +1899,7 @@ void analyzeDataSerial() {
 
         // 保存修正后的时间分辨率到TAC_tree
         outputFile->cd();
+        tac_voltage = v;
         sigma_cfd_before = cfd_sigma_before.count(v) ? cfd_sigma_before[v] : 0;
         sigmaErr_cfd_before = cfd_sigmaErr_before.count(v) ? cfd_sigmaErr_before[v] : 0;
         sigma_cfd_afterTA = cfd_sigma_afterTA.count(v) ? cfd_sigma_afterTA[v] : 0;
