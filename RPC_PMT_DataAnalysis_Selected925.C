@@ -44,6 +44,7 @@
 #include <mutex>
 #include <atomic>
 #include <map>
+#include <limits>
 #include <set>
 #include <sstream>
 #include "TFile.h"
@@ -494,7 +495,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
     params.timing_50 = interpolateTime(time, signal, threshold_50, idx_50_left - 1, idx_50_left);
     params.CFD_time = interpolateTime(time, signal, threshold_CFD, idx_CFD_start - 1, idx_CFD_start);
     params.threshold_time = (RPC_THRESHOLD < params.amplitude && idx_threshold_start > 0) ?
-                           interpolateTime(time, signal, threshold_A, idx_threshold_prev, idx_threshold_start) : 1e6;
+                           interpolateTime(time, signal, threshold_A, idx_threshold_prev, idx_threshold_start) : std::numeric_limits<double>::quiet_NaN();
 
     if (Gaus_Fit){
 
@@ -622,6 +623,7 @@ void processVoltageSerial(int voltage, const string& folder_name,
     // 【修复】分支变量声明在循环外部，确保生命周期覆盖所有Fill调用
     double amp_rpc, amp_pmt, rt_rpc, rt_pmt, fwhm_rpc, fwhm_pmt;
     double charge_rpc, charge_pmt, timing_CFD, timing_thresh;
+    bool threshold_valid = false;
 
     // 【修复】使用Branch而非SetBranchAddress（只设置一次指针）
     tree->Branch("amplitude_RPC", &amp_rpc, "amplitude_RPC/D");
@@ -634,6 +636,7 @@ void processVoltageSerial(int voltage, const string& folder_name,
     tree->Branch("charge_PMT", &charge_pmt, "charge_PMT/D");
     tree->Branch("timing_CFD", &timing_CFD, "timing_CFD/D");
     tree->Branch("timing_threshold", &timing_thresh, "timing_threshold/D");
+    tree->Branch("threshold_valid", &threshold_valid, "threshold_valid/O");
 
     // 预留容器空间减少动态扩容
     amplitudes.reserve(csvCount);
@@ -676,6 +679,7 @@ void processVoltageSerial(int voltage, const string& folder_name,
         charge_pmt = pmt_params.charge;
         timing_CFD = timing_diff.constant_fraction;
         timing_thresh = timing_diff.threshold;
+        threshold_valid = std::isfinite(timing_thresh);
 
         tree->Fill();
 
@@ -812,7 +816,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
         vector<double> tThreshValid;
         tThreshValid.reserve(n);
         for (int i = 0; i < n; ++i) {
-            if (tThresh[i] < 1e2) tThreshValid.push_back(tThresh[i]);
+            if (std::isfinite(tThresh[i])) tThreshValid.push_back(tThresh[i]);
         }
 
         // ===== 1D直方图范围 =====
@@ -849,7 +853,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
             hAmp->Fill(amps[i]);
             hChg->Fill(chgs[i]);
             hTC->Fill(tCFD[i]);
-            if (tThresh[i] < 1e2) hTT->Fill(tThresh[i]);
+            if (std::isfinite(tThresh[i])) hTT->Fill(tThresh[i]);
         }
 
         // ========== 图1：四个1D分布 (2x2) ==========
@@ -956,7 +960,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
         for (int i = 0; i < n; ++i) {
             h2_CFD_A->Fill(amps[i], tCFD[i]);
             h2_CFD_Q->Fill(chgs[i], tCFD[i]);
-            if (tThresh[i] < 1e2) {
+            if (std::isfinite(tThresh[i])) {
                 h2_Thresh_A->Fill(amps[i], tThresh[i]);
                 h2_Thresh_Q->Fill(chgs[i], tThresh[i]);
             }
@@ -982,7 +986,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
         {
             int idx = 0;
             for (int i = 0; i < n; ++i) {
-                if (tThresh[i] < 1e2) {
+                if (std::isfinite(tThresh[i])) {
                     gr_thA->SetPoint(idx, amps[i], tThresh[i]);
                     gr_thQ->SetPoint(idx, chgs[i], tThresh[i]);
                     idx++;
@@ -1119,7 +1123,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
             hT_cfd_before->Fill(tCFD[i]);
             hT_cfd_TA->Fill(tCFD[i] - fitCfdA->Eval(amps[i]));
             hT_cfd_TQ->Fill(tCFD[i] - fitCfdQ->Eval(chgs[i]));
-            if (tThresh[i] < 1e2) {
+            if (std::isfinite(tThresh[i])) {
                 hT_thresh_before->Fill(tThresh[i]);
                 hT_thresh_TA->Fill(tThresh[i] - fitThA->Eval(amps[i]));
                 hT_thresh_TQ->Fill(tThresh[i] - fitThQ->Eval(chgs[i]));
@@ -1199,7 +1203,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
             TH1F* hTT_tq = new TH1F(Form("hF4_ttTQ_%dV", voltage), "", nBinsTthresh, -caliRange_Tthresh, caliRange_Tthresh);
             for (int i = 0; i < n; ++i) {
                 hTC_tq->Fill(tCFD[i] - fitCfdQ->Eval(chgs[i]));
-                if (tThresh[i] < 1e2) {
+                if (std::isfinite(tThresh[i])) {
                     hTT_tq->Fill(tThresh[i] - fitThQ->Eval(chgs[i]));
                 }
             }
@@ -1796,7 +1800,7 @@ void analyzeDataSerial() {
             h_charge->Fill(charges[voltage][i]);
             h_timing_const->Fill(timing_diffs_const[voltage][i]);
 
-            if (timing_diffs_thresh[voltage][i] < 1e2) {
+            if (std::isfinite(timing_diffs_thresh[voltage][i])) {
                 h_timing_thresh->Fill(timing_diffs_thresh[voltage][i]);
             }
         }
