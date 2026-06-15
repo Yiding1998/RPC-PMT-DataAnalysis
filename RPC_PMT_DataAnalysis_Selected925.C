@@ -362,9 +362,11 @@ SignalParams calculateSignalParams( const vector<double>& time,
             g_pmt->SetPoint(i, filtered_time[i], filtered_signal[i]);
         }
 
-        TF1 *f_pmt = new TF1("f_pmt", "gaus",t1,t2);
+        static atomic<unsigned long> fit_counter{0};
+        const unsigned long fit_id = fit_counter.fetch_add(1);
+        TF1 *f_pmt = new TF1(Form("f_pmt_%lu", fit_id), "gaus", t1, t2);
         f_pmt->SetParameters(signal[params.amplitudex_idx], time[params.amplitudex_idx], 1.7); // 初始参数：幅值、均值、标准差
-        int fit_status = g_pmt->Fit("f_pmt", "R Q");
+        int fit_status = g_pmt->Fit(f_pmt, "R Q");
         // Get the updated fit results
         A_f_pmt = f_pmt->GetParameter(0);
         mean_f_pmt = f_pmt->GetParameter(1);
@@ -404,6 +406,8 @@ SignalParams calculateSignalParams( const vector<double>& time,
         gaussian_fit_valid = fit_status == 0 && std::isfinite(A_f_pmt) &&
                              std::isfinite(mean_f_pmt) && std::isfinite(sigma_f_pmt) &&
                              sigma_f_pmt > 0.0;
+        delete f_pmt;
+        delete g_pmt;
         // cout<<"\t"<<endl;
     }
   
