@@ -154,7 +154,11 @@ bool readCSVData(const string& filename,
         pmt_signal.push_back(pmt);
     }
 
-    return !time.empty() && time.size() == rpc_signal.size() && time.size() == pmt_signal.size();
+    if (time.size() < 3 || time.size() != rpc_signal.size() || time.size() != pmt_signal.size()) return false;
+    for (size_t i = 1; i < time.size(); ++i) {
+        if (!std::isfinite(time[i]) || time[i] <= time[i - 1]) return false;
+    }
+    return true;
 }
 
 void baselineCorrection(vector<double>& signal,

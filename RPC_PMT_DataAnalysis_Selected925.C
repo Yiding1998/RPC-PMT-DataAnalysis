@@ -259,12 +259,17 @@ bool readCSVData(const string& filename, vector<double>& rpc_time, vector<double
     }
 
     file.close();
+    if (rpc_time.size() < 3 || rpc_time.size() != pmt_time.size() ||
+        rpc_time.size() != rpc_signal.size() || rpc_time.size() != pmt_signal.size()) return false;
+    for (size_t i = 1; i < rpc_time.size(); ++i) {
+        if (!std::isfinite(rpc_time[i]) || rpc_time[i] <= rpc_time[i - 1]) return false;
+    }
     return true;
 }
 
 // 优化的基线校正 - 预存size避免重复调用
 void baselineCorrection(vector<double>& signal, const vector<double>& time, const double baseline_window = BASELINE_WINDOW) {
-    if (signal.empty() || time.empty()) return;
+    if (signal.size() < 3 || signal.size() != time.size()) return;
 
     const double step = time[2] - time[1];
     const double baseline_window_end = time[0] + baseline_window;
@@ -294,7 +299,7 @@ SignalParams calculateSignalParams( const vector<double>& time,
                                     bool Gaus_Fit = false) {
     SignalParams params = {0.0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-    if (signal.empty()) return params;
+    if (signal.size() < 3 || signal.size() != time.size()) return params;
 
     // const double time_min = -8.0;
     const double time_min = max(-14.0, time[0]);
