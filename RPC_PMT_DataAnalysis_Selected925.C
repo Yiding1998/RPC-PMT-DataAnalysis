@@ -969,6 +969,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
             bin_num, h2Q_lo, h2Q_hi, bin_num, h2Tthresh_lo, h2Tthresh_hi);
 
         for (int i = 0; i < n; ++i) {
+            if ((i % 2) != 0) continue;
             h2_CFD_A->Fill(amps[i], tCFD[i]);
             h2_CFD_Q->Fill(chgs[i], tCFD[i]);
             if (std::isfinite(tThresh[i])) {
@@ -1131,6 +1132,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
             nBinsTthresh, -caliRange_Tthresh, caliRange_Tthresh);
 
         for (int i = 0; i < n; ++i) {
+            if ((i % 2) == 0) continue;
             hT_cfd_before->Fill(tCFD[i]);
             hT_cfd_TA->Fill(tCFD[i] - fitCfdA->Eval(amps[i]));
             hT_cfd_TQ->Fill(tCFD[i] - fitCfdQ->Eval(chgs[i]));
@@ -1213,6 +1215,7 @@ void performTA_TQ_Correction(const vector<int>& voltages,
             TH1F* hTC_tq = new TH1F(Form("hF4_tcTQ_%dV", voltage), "", nBinsTcfd, -caliRange_Tcfd, caliRange_Tcfd);
             TH1F* hTT_tq = new TH1F(Form("hF4_ttTQ_%dV", voltage), "", nBinsTthresh, -caliRange_Tthresh, caliRange_Tthresh);
             for (int i = 0; i < n; ++i) {
+                if ((i % 2) == 0) continue;
                 hTC_tq->Fill(tCFD[i] - fitCfdQ->Eval(chgs[i]));
                 if (std::isfinite(tThresh[i])) {
                     hTT_tq->Fill(tThresh[i] - fitThQ->Eval(chgs[i]));
